@@ -19,7 +19,7 @@
 //!         .await?;
 //!
 //!     // 2. Create an Authenticator
-//!     let auth = yup_oauth2::ServiceAccountAuthenticator::builder(sa_key)
+//!     let auth = yup_oauth2::ServiceAccountAuthenticator::builder(sa_key.clone())
 //!         .build()
 //!         .await?;
 //!
@@ -37,7 +37,7 @@
 //!     // that owns the read job. This does not download any data.
 //!     let mut read_session = client
 //!         .read_session_builder(test_table)
-//!         .parent_project_id("openquery-public-testing".to_string())
+//!         .parent_project_id(sa_key.project_id.unwrap())
 //!         .build()
 //!         .await?;
 //!

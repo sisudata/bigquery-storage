@@ -19,6 +19,9 @@
 //!     Ok(())
 //! }
 //! ```
+
+use std::sync::Arc;
+
 use hyper::client::connect::Connect;
 use yup_oauth2::authenticator::Authenticator;
 
@@ -83,16 +86,16 @@ macro_rules! read_session_builder {
             )*
         }
 
-        /// A builder for [`ReadSession`](crate::client::ReadSession).
-        /// When in doubt about what a field does, please refer to [`CreateReadSessionRequest`](crate::googleapis::CreateReadSessionRequest) and the [official API](https://cloud.google.com/bigquery/docs/reference/storage/rpc/google.cloud.bigquery.storage.v1) documentation.
-        pub struct ReadSessionBuilder<'a, T> {
-            client: &'a mut Client<T>,
+        /// A builder for [`ReadSession`].
+        /// When in doubt about what a field does, please refer to [`CreateReadSessionRequest`] and the [official API](https://cloud.google.com/bigquery/docs/reference/storage/rpc/google.cloud.bigquery.storage.v1) documentation.
+        pub struct ReadSessionBuilder<T> {
+            client: Client<T>,
             table: Table,
             opts: ReadSessionBuilderOpts
         }
 
-        impl<'a, T> ReadSessionBuilder<'a, T> {
-            fn new(client: &'a mut Client<T>, table: Table) -> Self {
+        impl<T> ReadSessionBuilder<T> {
+            fn new(client: Client<T>, table: Table) -> Self {
                 let opts = ReadSessionBuilderOpts::default();
                 Self { client, table, opts }
             }
@@ -129,13 +132,13 @@ read_session_builder! {
     parent_project_id: String,
 }
 
-impl<'a, C> ReadSessionBuilder<'a, C>
+impl<C> ReadSessionBuilder<C>
 where
     C: Connect + Clone + Send + Sync + 'static,
 {
     /// Build the [`ReadSession`](ReadSession). This will hit Google's API and
     /// prepare the desired read streams.
-    pub async fn build(self) -> Result<ReadSession<'a, C>, Error> {
+    pub async fn build(mut self) -> Result<ReadSession<C>, Error> {
         let table = self.table.to_string();
 
         let mut inner = BigQueryReadSession {
@@ -182,12 +185,12 @@ where
 
 /// A practical wrapper around a [BigQuery Storage read session](https://cloud.google.com/bigquery/docs/reference/storage#create_a_session).
 /// Do not create it manually, use [`Client::read_session_builder`](Client::read_session_builder) instead.
-pub struct ReadSession<'a, C> {
-    client: &'a mut Client<C>,
+pub struct ReadSession<C> {
+    client: Client<C>,
     inner: BigQueryReadSession,
 }
 
-impl<'a, C> ReadSession<'a, C>
+impl<C> ReadSession<C>
 where
     C: Connect + Clone + Send + Sync + 'static,
 {
@@ -210,7 +213,8 @@ where
 
 /// The main object of this crate.
 pub struct Client<C> {
-    auth: Authenticator<C>,
+    // TODO(dermesser/yup-oauth2#133): remove Arc.
+    auth: Arc<Authenticator<C>>,
     big_query_read_client: BigQueryReadClient<Channel>,
 }
 
@@ -227,13 +231,13 @@ where
             .await?;
         let big_query_read_client = BigQueryReadClient::new(channel);
         Ok(Self {
-            auth,
+            auth: Arc::new(auth),
             big_query_read_client,
         })
     }
 
-    /// Create a new [`ReadSessionBuilder`](ReadSessionBuilder).
-    pub fn read_session_builder(&mut self, table: Table) -> ReadSessionBuilder<'_, C> {
+    /// Create a new [`ReadSessionBuilder`].
+    pub fn read_session_builder(self, table: Table) -> ReadSessionBuilder<C> {
         ReadSessionBuilder::new(self, table)
     }
     async fn new_request<D>(&self, t: D, params: &str) -> Result<Request<D>, Error> {
@@ -294,7 +298,7 @@ mod tests {
             .await
             .unwrap();
 
-        let mut client = Client::new(auth).await.unwrap();
+        let client = Client::new(auth).await.unwrap();
 
         let test_table = Table::new("bigquery-public-data", "london_bicycles", "cycle_stations");
 
