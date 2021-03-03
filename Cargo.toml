@@ -10,6 +10,7 @@ homepage = "https://github.com/openquery-io/bigquery-storage"
 readme = "README.md"
 
 [build-dependencies]
+prost-build = "0.7"
 tonic-build = "0.4"
 
 [dependencies]
