@@ -289,7 +289,7 @@ mod tests {
         let sa_key = yup_oauth2::read_service_account_key("clientsecret.json")
             .await
             .unwrap();
-        let auth = yup_oauth2::ServiceAccountAuthenticator::builder(sa_key)
+        let auth = yup_oauth2::ServiceAccountAuthenticator::builder(sa_key.clone())
             .build()
             .await
             .unwrap();
@@ -300,7 +300,7 @@ mod tests {
 
         let mut read_session = client
             .read_session_builder(test_table)
-            .parent_project_id("openquery-public-testing".to_string())
+            .parent_project_id(sa_key.project_id.unwrap())
             .build()
             .await
             .unwrap();
@@ -314,6 +314,6 @@ mod tests {
             }
         }
 
-        assert_eq!(num_rows, 789);
+        assert_eq!(num_rows, 792);
     }
 }
