@@ -2,7 +2,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut config = prost_build::Config::new();
     config.bytes(&["."]);
 
-    tonic_build::configure().format(false).compile_with_config(
+    tonic_build::configure().compile_with_config(
         config,
         &[
             "googleapis/google/cloud/bigquery/storage/v1/arrow.proto",
